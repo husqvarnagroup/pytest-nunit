@@ -176,14 +176,20 @@ class _NunitNodeReporter:
             r["error"] = testreport.longreprtext
             r["stack-trace"] = self.nunit_xml._getcrashline(testreport)
         elif testreport.when == "teardown":
-            r = self.nunit_xml.cases[testreport.nodeid]
+            try:
+                r = self.nunit_xml.cases[testreport.nodeid]
+            except KeyError:
+                r = self.nunit_xml.cases[testreport.nodeid] = {}
+                r["call-report"] = None
             r["stop"] = datetime.utcnow()
             r["duration"] = (
                 (r["stop"] - r["start"]).total_seconds() if r["call-report"] else 0
             )  # skipped.
             r["teardown-report"] = testreport
 
-            if r["setup-report"].outcome == "skipped":
+            if "setup-report" not in r:
+                r["outcome"] = "failed"
+            elif r["setup-report"].outcome == "skipped":
                 r["outcome"] = "skipped"
             elif r["setup-report"].outcome == "failed":
                 r["outcome"] = "failed"
