@@ -39,6 +39,7 @@ setup(
             'xmlschema==1.0.13',
             'pytest',
             'pytest-cov',
+            'flaky',
         ],
     },
     classifiers=[

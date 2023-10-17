@@ -5,6 +5,8 @@ import os
 
 import xmlschema
 
+import xml.dom.minidom
+
 
 def test_passing_test(testdir, tmpdir):
     """
@@ -222,3 +224,36 @@ def test_failing_fixture(testdir, tmpdir):
     assert "".join(result.stderr.lines) == ""
     result.stdout.fnmatch_lines(["*test_one ERROR*"])
     result.stdout.fnmatch_lines(["*test_two XFAIL*"])
+
+
+def test_failing_fixture_flaky(testdir, tmpdir):
+    testdir.makepyfile(
+        """
+    import pytest
+    from flaky import flaky
+
+    @pytest.fixture(scope="function")
+    def failing_fixture():
+        raise Exception("SomeException")
+
+        yield
+
+    @flaky(max_runs=3, min_passes=1)
+    def test_one(failing_fixture):
+        pass
+    """
+    )
+    outfile = tmpdir.join("out.xml")
+    outfile_pth = str(outfile)
+
+    result = testdir.runpytest("--setup-plan")
+    result = testdir.runpytest("-v", "--nunit-xml=" + outfile_pth)
+
+    with open(outfile_pth) as f:
+        s = f.read()
+        temp = xml.dom.minidom.parseString(s)
+        print(temp.toprettyxml())
+
+    assert int(result.ret) == 1
+    assert "".join(result.stderr.lines) == ""
+    result.stdout.fnmatch_lines(["*test_one ERROR*"])
